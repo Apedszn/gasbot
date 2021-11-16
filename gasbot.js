@@ -111,17 +111,17 @@ async function sendToDiscord(r){
         });
         
     }
-    if(currentGas <= gasAlertLevel){
+    if(alertMessage?.id !== undefined && !alertLock){
+        console.log("deleting",alertMessage.id)
+        await alertMessage.delete();
+        alertMessage = {}
+    }
+    if(currentGas <= gasAlertLevel && !alertLock){
       ea
         .setTitle(`Current Gas: ${currentGas}`)
         .setURL('https://www.blocknative.com/gas-estimator')
         .setDescription(`[❗ALERT❗ Gas has dropped below ${gasAlertLevel} gwei. This message will self-destruct in ${alertTimer} minutes](https://www.blocknative.com/gas-estimator)
 Sent at ${dt}`)
-      if(alertMessage?.id !== undefined && !alertLock){
-        console.log("deleting",alertMessage.id)
-        await alertMessage.delete();
-        alertMessage = {}
-      }
         alertMessage = await gasMessage.send({
             username: `ALERT SER`,
             embeds: [ea],
