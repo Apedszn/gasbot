@@ -114,7 +114,7 @@ async function sendToDiscord(r){
       ea
         .setTitle(`Current Gas: ${currentGas}`)
         .setURL('https://www.blocknative.com/gas-estimator')
-        .setDescription(`[❗ALERT❗ Gas has dropped below 80 gwei. This message will self-destruct in ${alertTimer} minutes](https://www.blocknative.com/gas-estimator)
+        .setDescription(`[❗ALERT❗ Gas has dropped below ${gasAlertLevel} gwei. This message will self-destruct in ${alertTimer} minutes](https://www.blocknative.com/gas-estimator)
 Sent at ${dt}`)
       if(alertMessage?.id !== undefined){
         console.log("deleting",alertMessage.id)
