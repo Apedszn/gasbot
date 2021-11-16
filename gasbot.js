@@ -103,6 +103,7 @@ async function sendToDiscord(r){
         console.log("No Msg ID"); 
         if (gasMessage?.id !== undefined && !alertLock){
             await gasMessage.delete();
+            gasMessage = {}
         }
             gasMessage = await gasChannel.send({
             username: `Gas Ser`,
