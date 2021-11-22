@@ -1,29 +1,17 @@
 const { Client, Intents, MessageEmbed, MessageAttachment } = require('discord.js');
 const nodeHtmlToImage = require('node-html-to-image')
+const gasID = "886418519078613042"
+const imgID = "908576507029499934"
 var axios = require("axios").default;
-
-/// USER INPUTS HERE ///
-const discAuthKey = "DiscBotAuthKey" //enter your Discord Bot Authentication Key here
-const gasID = "gasChannelID" //enter the Channel ID you would like gas messages sent to
-const imgID = "imageChannelID" //enter the secret Channel ID where you would like the gas images sent to
-const bnAPIKey = "BlockNativeAPIKey" //enter your Block Native API key here
-const alertTimer = 30; //Alert message time out timer in minutes
-const pollBNAPI = 86.4; //Seconds between polls to pull gas data from BlockNative API (this is calculated based on the free BlockNative plan)
-const gasAlertLevel = 80; //gas in GWEI to alert if it drops below this value
-/// USER INPUTS END ///
-
-//Initial global variables
+const bnAPIKey = "f2a7f0d4-0e8c-414a-b259-30345b2d932c"
 var alertMessage = null;
 var gasMessage = null;
-var gasChannel = null;
-var imgChannel = null;
 var alertLock = false;
-
-//New Message embed object for gas message
+var alertTimer = 30;
 let e = new MessageEmbed();
-//New message embed object for alert message
 let ea = new MessageEmbed();
-
+var prevMsg = null;
+var msg = null;
 const axiosoptions = {
     method: 'GET',
     url : `https://api.blocknative.com/gasprices/blockprices`,
@@ -31,32 +19,27 @@ const axiosoptions = {
         Authorization: bnAPIKey
     }
 };
-
-//Create new Discord Bot Client
 const client = new Client({
   intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES]
 });
 
+var gasChannel = null;
+var imgChannel = null;
 client.on("ready", async () => {
-    //Create Discord Channel object for gas channel
     gasChannel = await client.channels.fetch(gasID);
-    //Create Discord Channel object for secret image channel
     imgChannel = await client.channels.fetch(imgID);
     console.log("I am ready!");
     start()
 });
 
-//Login to Discord Bot Client using authentication key
-client.login(discAuthKey);
+client.login("OTA1NjkyNjE2MjkxNjgwMjg3.YYNx-g.XTI2tY0Di-NjtIISFl0pw4ZUkEY");
 
-//Delay function to pause script for N milliseconds
 async function delay(ms, state = null){
     return new Promise((resolve, reject) => {
         setTimeout(() => resolve(state), ms);
     });
 }
 
-//Start loop to constantly pull gas data from Block Native every 
 async function start(){
     do{
         await axios.request(axiosoptions).then(async function (response) {
@@ -65,47 +48,54 @@ async function start(){
         }).catch(function (error) {
             console.error(error);
         });
-        await delay(pollBNAPI * 1000)
+        await delay(86.4 * 1000)
     }while(true)
 }
+async function startTimer(){
 
-//Function queue to force functions to execute one after the other sequentially
+}
 var q_ = Promise.resolve();
 async function queue(fn) {
     q_ = q_.then(await fn);
     return q_;
 }
 
-//Function to send gas message to Discord
 async function sendToDiscord(r){
+    prevMsg = msg;
     const base = r.blockPrices[0]
     const currentGas = parseFloat(base.baseFeePerGas).toFixed(2)
     const d = new Date();
     const dt = d.toLocaleString('en-US',{dateStyle: 'short',timeStyle:'long',timeZone: 'America/Los_Angeles'});
-    //create Gas image from html code
-    const tableImg = await htmlToImage(r)
-    const file = new MessageAttachment(tableImg,`gas.jpeg`)
-    const msg = await imgChannel.send({ files: [file] })
-    const url = msg.attachments.first()?.url ?? '';
+    var url = ''
+    try{
+        const tableImg = await htmlToImage(r)
+        const file = new MessageAttachment(tableImg,`gas.jpeg`)
+        msg = await imgChannel.send({ files: [file] })
+        url = msg.attachments.first()?.url ?? '';
+    }catch{
+        console.log("Image Error")
+    }
     e
         .setTitle(`Current Gas: ${currentGas}`)
         .setURL('https://www.blocknative.com/gas-estimator')
         .setDescription(`Updated at ${dt}`)
         .setImage(url)
         .setFooter('Powered by Blocknative')
-    await msg.delete()
+    if(prevMsg !== null){
+        await prevMsg.delete()
+    }
     try{
         await gasMessage.edit({
             username: `Gas Ser`,
             embeds: [e],
         })
     }catch{
-        console.log("No Msg ID"); 
+        console.log("No Msg ID");
+        
         if (gasMessage?.id !== undefined){
-            await gasMessage.delete();
-            gasMessage = {}
-        }
-            gasMessage = await gasChannel.send({
+          await gasMessage.delete();
+      }
+          gasMessage = await gasChannel.send({
             username: `Gas Ser`,
             embeds: [e],
         });
@@ -116,29 +106,25 @@ async function sendToDiscord(r){
         await alertMessage.delete();
         alertMessage = {}
     }
-    if(currentGas <= gasAlertLevel && !alertLock){
+    if(currentGas <= 80 && !alertLock){
       ea
         .setTitle(`Current Gas: ${currentGas}`)
         .setURL('https://www.blocknative.com/gas-estimator')
-        .setDescription(`[❗ALERT❗ Gas has dropped below ${gasAlertLevel} gwei. This message will self-destruct in ${alertTimer} minutes](https://www.blocknative.com/gas-estimator)
+        .setDescription(`[❗ALERT❗ Gas has dropped below 80 gwei. This message will self-destruct in ${alertTimer} minutes](https://www.blocknative.com/gas-estimator)
 Sent at ${dt}`)
-        alertMessage = await gasMessage.send({
+        alertMessage = await gasChannel.send({
             username: `ALERT SER`,
             embeds: [ea],
         });
         alertLocker()
     }
 }
-
-//function to lock the gas alert from being deleted for alertTimer minutes
 async function alertLocker(){
     alertLock = true;
     await delay(alertTimer * 60 * 1000)
     alertLock = false;
     //await webhookClient.deleteMessage(m.id)
 }
-
-//create image from HTML code
 async function htmlToImage(r){
     const base = r.blockPrices[0]
     const estimated = base.estimatedPrices
@@ -262,14 +248,16 @@ async function htmlToImage(r){
 </html>
 `
 
-    const images = await nodeHtmlToImage({
-        html: _htmlTemplate,
-        quality: 100,
-        type: 'jpeg',
-        puppeteerArgs: {
-          args: ['--no-sandbox'],
-        },
-        encoding: 'buffer',
-    })
-    return images;
+const images = await nodeHtmlToImage({
+    html: _htmlTemplate,
+    quality: 100,
+    type: 'jpeg',
+    puppeteerArgs: {
+      product: "chrome",
+      executablePath: "/usr/lib/chromium-browser/chromium-browser",
+      args: ['--no-sandbox'],
+    },
+    encoding: 'buffer',
+  })
+return images;
 }
