@@ -1,9 +1,9 @@
 const { Client, Intents, MessageEmbed, MessageAttachment } = require('discord.js');
 const nodeHtmlToImage = require('node-html-to-image')
-const gasID = "886418519078613042"
-const imgID = "908576507029499934"
+const gasID = "GasChannelIDHere"
+const imgID = "ImgChannelIDHere"
 var axios = require("axios").default;
-const bnAPIKey = "f2a7f0d4-0e8c-414a-b259-30345b2d932c"
+const bnAPIKey = "BlockNativeAPIKeyHere"
 var alertMessage = null;
 var gasMessage = null;
 var alertLock = false;
@@ -32,7 +32,7 @@ client.on("ready", async () => {
     start()
 });
 
-client.login("OTA1NjkyNjE2MjkxNjgwMjg3.YYNx-g.XTI2tY0Di-NjtIISFl0pw4ZUkEY");
+client.login("DiscordAuthKeyHere");
 
 async function delay(ms, state = null){
     return new Promise((resolve, reject) => {
